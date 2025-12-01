@@ -11,7 +11,7 @@ export function readData({
   const filePath = resolve(
     import.meta.dirname,
     '../data',
-    `day-${String(day).padStart(2, '0')}${example ? '-example' : ''}.txt`,
+    `day-${String(day).padStart(2, '0')}${example ? '.example' : ''}.txt`,
   )
   const fileContent = readFileSync(filePath, 'utf-8')
   return fileContent.split('\n')
