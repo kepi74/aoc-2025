@@ -73,6 +73,48 @@ if (import.meta.vitest) {
   })
 }
 
+function isInvalidProductIdBetter(productId: ProductId): boolean {
+  const productIdStr = productId.toString()
+  const halfLength = Math.floor(productIdStr.length / 2)
+
+  const candidates = [Array.from({ length: halfLength }, (_, i) => i + 1)]
+    .flat()
+    .map((length) => productIdStr.slice(0, length))
+
+  return candidates.some(
+    (candidate) => productIdStr.replaceAll(candidate, '') === '',
+  )
+}
+
+if (import.meta.vitest) {
+  const { describe, it, expect } = import.meta.vitest
+
+  describe('isInvalidProductIdBetter', () => {
+    const validProductIds = [100, 1331, 150, 1234567, 655556, 1698528].map(
+      ProductId,
+    )
+    const invalidProductIds = [11, 999, 1188511885, 824824824, 2121212121].map(
+      ProductId,
+    )
+
+    it.each(validProductIds)(
+      'returns false for valid product ID %s',
+      (productId) => {
+        const result = isInvalidProductIdBetter(productId)
+        expect(result).toBe(false)
+      },
+    )
+
+    it.each(invalidProductIds)(
+      'returns true for invalid product ID %s',
+      (productId) => {
+        const result = isInvalidProductIdBetter(productId)
+        expect(result).toBe(true)
+      },
+    )
+  })
+}
+
 /* ---------------------------------------------------------------------------------- */
 const data = readData({
   day: 2,
@@ -90,6 +132,7 @@ const data = readData({
     }
     return rangeParts as ProductIdRange
   })
+
 function part1(data: ProductIdRange[]): void {
   const invalidProductIds: ProductId[] = data
     .map(unwrapProductIds)
@@ -101,4 +144,16 @@ function part1(data: ProductIdRange[]): void {
   console.log(`Sum of invalid product IDs: ${sum}`)
 }
 
+function part2(data: ProductIdRange[]): void {
+  const invalidProductIds: ProductId[] = data
+    .map(unwrapProductIds)
+    .flat()
+    .filter(isInvalidProductIdBetter)
+
+  const sum = invalidProductIds.reduce((acc, curr) => acc + curr, 0)
+
+  console.log(`Sum of invalid product IDs refined: ${sum}`)
+}
+
 part1(data)
+part2(data)
