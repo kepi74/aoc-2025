@@ -153,4 +153,48 @@ function part01(grid: Grid): void {
   console.log(`There are ${accessibleCellsCount} accessible rolls.`)
 }
 
+function part02(grid: Grid): void {
+  function removeRolls(grid: Grid): Grid {
+    const newGrid = grid.map((row, rowIndex) =>
+      row.map((cell, colIndex) => {
+        if (cell !== '@') {
+          return cell
+        }
+        const adjancentRollsCount = getAdjancentCells({
+          grid,
+          adjacentOffsets,
+          coordinate: [rowIndex, colIndex],
+        })
+          .filter(isSome)
+          .filter(({ value }) => value === '@').length
+
+        if (adjancentRollsCount < 4) {
+          return 'x'
+        }
+
+        return cell
+      }),
+    )
+
+    const newGridString = newGrid.flat().join('')
+    const oldGridString = grid.flat().join('')
+
+    if (newGridString === oldGridString) {
+      return newGrid
+    }
+
+    return removeRolls(newGrid)
+  }
+
+  const finalGrid = removeRolls(grid)
+
+  const originalRollsCount = grid.flat().filter((cell) => cell === '@').length
+  const finalRollsCount = finalGrid.flat().filter((cell) => cell === '@').length
+
+  const removedRollsCount = originalRollsCount - finalRollsCount
+
+  console.log(`Removable cells count: ${removedRollsCount}`)
+}
+
 part01(data)
+part02(data)
