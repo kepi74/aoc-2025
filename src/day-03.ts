@@ -30,6 +30,10 @@ function isSome<T>(option: Option<T>): option is Some<T> {
   return option.__tag === 'Some'
 }
 
+function lineToBatteryBank(line: string): BatteryBank {
+  return line.split('').map((d) => BatteryCapacity(Number(d)))
+}
+
 function getLargestJoltage(batteryBank: BatteryBank): Joltage {
   const maxJoltage = [9, 8, 7, 6, 5, 4, 3, 2, 1].reduce<Option<Joltage>>(
     (acc, curr) => {
@@ -81,22 +85,10 @@ if (import.meta.vitest) {
     })
 
     it.each([
-      [
-        '987654321111111'.split('').map((d) => BatteryCapacity(Number(d))),
-        Joltage(98),
-      ],
-      [
-        '811111111111119'.split('').map((d) => BatteryCapacity(Number(d))),
-        Joltage(89),
-      ],
-      [
-        '234234234234278'.split('').map((d) => BatteryCapacity(Number(d))),
-        Joltage(78),
-      ],
-      [
-        '818181911112111'.split('').map((d) => BatteryCapacity(Number(d))),
-        Joltage(92),
-      ],
+      [lineToBatteryBank('987654321111111'), Joltage(98)],
+      [lineToBatteryBank('811111111111119'), Joltage(89)],
+      [lineToBatteryBank('234234234234278'), Joltage(78)],
+      [lineToBatteryBank('818181911112111'), Joltage(92)],
     ])(
       `calculates the correct Joltage for battery bank %s`,
       (batteryBank, expectedJoltage) => {
@@ -104,6 +96,105 @@ if (import.meta.vitest) {
         expect(joltage).toEqual(expectedJoltage)
       },
     )
+  })
+}
+
+function findFirstLowerCapacityBattery(
+  batteryBank: BatteryBank,
+): Option<number> {
+  return batteryBank.reduce<Option<number>>((acc, currentBattery, index) => {
+    if (isSome(acc)) {
+      return acc
+    }
+
+    const nextBattery = batteryBank[index + 1]
+    if (nextBattery === undefined) {
+      return acc
+    }
+
+    if (currentBattery < nextBattery) {
+      return Some(index)
+    }
+
+    return acc
+  }, None())
+}
+
+if (import.meta.vitest) {
+  const { describe, it, expect } = import.meta.vitest
+
+  describe('findFirstLowerCapacityBattery', () => {
+    it('returns the index of the first removable battery', () => {
+      const batteryBank: BatteryBank = [
+        BatteryCapacity(5),
+        BatteryCapacity(4),
+        BatteryCapacity(6),
+        BatteryCapacity(3),
+      ]
+      const result = findFirstLowerCapacityBattery(batteryBank)
+      expect(result).toEqual(Some(1))
+    })
+
+    it('returns None if no removable battery is found', () => {
+      const batteryBank: BatteryBank = [
+        BatteryCapacity(5),
+        BatteryCapacity(4),
+        BatteryCapacity(3),
+      ]
+      const result = findFirstLowerCapacityBattery(batteryBank)
+      expect(result).toEqual(None())
+    })
+  })
+}
+
+function removeBatteries({
+  batteryBank,
+  targetLength,
+}: {
+  batteryBank: BatteryBank
+  targetLength: number
+}) {
+  const candidateIndex = findFirstLowerCapacityBattery(batteryBank)
+
+  if (isSome(candidateIndex)) {
+    const firstPart = batteryBank.slice(0, candidateIndex.value)
+    const secondPart = batteryBank.slice(candidateIndex.value + 1)
+    const newBatteryBank = [...firstPart, ...secondPart]
+
+    if (newBatteryBank.length > targetLength) {
+      return removeBatteries({
+        batteryBank: newBatteryBank,
+        targetLength,
+      })
+    } else {
+      return newBatteryBank
+    }
+  }
+
+  batteryBank.pop()
+
+  if (batteryBank.length > targetLength) {
+    return removeBatteries({ batteryBank, targetLength })
+  }
+
+  return batteryBank
+}
+
+if (import.meta.vitest) {
+  const { describe, it, expect } = import.meta.vitest
+
+  describe('removeBatteries', () => {
+    const targetLength = 12
+
+    it.each([
+      [lineToBatteryBank('987654321111111'), lineToBatteryBank('987654321111')],
+      [lineToBatteryBank('811111111111119'), lineToBatteryBank('811111111119')],
+      [lineToBatteryBank('234234234234278'), lineToBatteryBank('434234234278')],
+      [lineToBatteryBank('818181911112111'), lineToBatteryBank('888911112111')],
+    ])('removes batteries correctly', (batteryBank, expectedBank) => {
+      const adjustedBank = removeBatteries({ batteryBank, targetLength })
+      expect(adjustedBank).toEqual(expectedBank)
+    })
   })
 }
 
@@ -118,3 +209,11 @@ const part1Result = data
   .reduce((acc, curr) => acc + curr, 0)
 
 console.log(`Total output joltage is: ${part1Result} jolts`)
+
+const part2Result = data
+  .map((batteryBank) => removeBatteries({ batteryBank, targetLength: 12 }))
+  .reduce((acc, curr) => acc + Number(curr.join('')), 0)
+
+console.log(
+  `Total output joltage after removing batteries is: ${part2Result} jolts`,
+)
